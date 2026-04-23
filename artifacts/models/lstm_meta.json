@@ -1,0 +1,17 @@
+{
+  "n_features": 47,
+  "lookback": 30,
+  "hidden_size": 128,
+  "num_layers": 2,
+  "dropout": 0.3,
+  "test_mae": 0.7803,
+  "test_rmse": 0.8943,
+  "test_risk_acc": 0.7113,
+  "test_risk_f1": 0.3168,
+  "baseline_mae": 0.5088,
+  "improvement": -0.2715,
+  "best_val_loss": 0.95815,
+  "n_train": 69900,
+  "n_val": 10010,
+  "n_test": 20090
+}

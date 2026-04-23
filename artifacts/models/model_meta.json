@@ -1,0 +1,16 @@
+{
+  "best_model": "xgboost",
+  "opt_threshold": 0.496647,
+  "youdens_j": 0.107209,
+  "cv_auc_xgb": 0.5757,
+  "cv_auc_lgb": 0.5682,
+  "test_auc_xgb": 0.5675,
+  "test_auc_lgb": 0.5616,
+  "test_auc_ensemble": 0.5661,
+  "overfitgap_xgb": -0.0082,
+  "overfitgap_lgb": -0.0065,
+  "pos_rate_train": 0.3931,
+  "pos_rate_test": 0.3872,
+  "n_features": 53,
+  "split": "random_80_20"
+}

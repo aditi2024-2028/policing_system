@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PoliceSight – Predictive Crime Intelligence</title>
+  <meta name="description" content="AI-powered predictive policing dashboard for LAPD divisions. Crime risk forecasting, hotspot detection, and spatial analytics." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">PoliceSight</span>
+        <span class="logo-sub">Crime Intelligence</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <p class="sidebar-label">DATE & TIME FORECAST</p>
+    <div class="input-group">
+      <label for="date-picker">Select Date</label>
+      <input type="date" id="date-picker" />
+    </div>
+    <div class="input-group" style="margin-top:0.6rem">
+      <label for="hour-picker">Target Hour (0-23)</label>
+      <input type="number" id="hour-picker" min="0" max="23" placeholder="Time (e.g. 19 for 7 PM)" />
+    </div>
+    <button class="btn-primary" id="btn-forecast" onclick="runForecast()" style="margin-top:1rem">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Run Forecast
+    </button>
+  </div>
+
+  <div class="sidebar-section">
+    <p class="sidebar-label">DIVISION DRILL-DOWN</p>
+    <div class="input-group">
+      <label for="zone-select">LAPD Division</label>
+      <select id="zone-select">
+        <option value="">— All Divisions —</option>
+      </select>
+    </div>
+    <button class="btn-secondary" id="btn-zone" onclick="forecastZone()">
+      Analyse Division
+    </button>
+  </div>
+
+  <div class="sidebar-section">
+    <p class="sidebar-label">RISK FILTER</p>
+    <div class="risk-filter-group">
+      <label class="risk-chip high active" data-level="High">
+        <input type="checkbox" checked id="filter-high"> High
+      </label>
+      <label class="risk-chip medium active" data-level="Medium">
+        <input type="checkbox" checked id="filter-medium"> Medium
+      </label>
+      <label class="risk-chip low active" data-level="Low">
+        <input type="checkbox" checked id="filter-low"> Low
+      </label>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <p class="sidebar-label">SYSTEM</p>
+    <div id="model-status" class="status-badge loading">
+      <div class="status-dot"></div>
+      <span>Connecting…</span>
+    </div>
+    <div class="sidebar-stats">
+      <div class="stat-item">
+        <span class="stat-val" id="stat-zones">—</span>
+        <span class="stat-key">Divisions</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val" id="stat-auc">—</span>
+        <span class="stat-key">Best AUC</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Accuracy Panel -->
+  <div class="sidebar-section">
+    <p class="sidebar-label">BEST MODEL ACCURACY</p>
+    <div class="model-name-badge" id="m-name-badge">—</div>
+    <div class="metrics-grid">
+      <div class="metric-tile">
+        <span class="metric-tile-val" id="m-acc">—</span>
+        <span class="metric-tile-key">Accuracy</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile-val" id="m-auc2">—</span>
+        <span class="metric-tile-key">ROC-AUC</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile-val" id="m-prec">—</span>
+        <span class="metric-tile-key">Precision</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile-val" id="m-recall">—</span>
+        <span class="metric-tile-key">Recall</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile-val" id="m-f1">—</span>
+        <span class="metric-tile-key">F1 Score</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile-val" id="m-train">26k</span>
+        <span class="metric-tile-key">Train Rows</span>
+      </div>
+    </div>
+    <!-- Accuracy progress bar -->
+    <div class="acc-bar-wrap">
+      <div class="acc-bar-label">
+        <span>Accuracy</span>
+        <span id="acc-bar-pct">—</span>
+      </div>
+      <div class="acc-bar-track">
+        <div class="acc-bar-fill" id="acc-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ── Main Content ──────────────────────────────────────────────────────── -->
+<main class="main-content">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="page-title">Crime Risk Map</h1>
+      <span class="page-sub" id="forecast-date-label">Select a date to forecast</span>
+    </div>
+    <div class="topbar-right">
+      <div class="badge-group">
+        <span class="badge badge-high" id="badge-high">— High</span>
+        <span class="badge badge-medium" id="badge-medium">— Medium</span>
+        <span class="badge badge-low" id="badge-low">— Low</span>
+      </div>
+      <div class="loading-spinner" id="global-spinner"></div>
+    </div>
+  </header>
+
+  <!-- KPI Cards -->
+  <section class="kpi-row" id="kpi-row">
+    <div class="kpi-card kpi-card-accent">
+      <div class="kpi-icon red">🔴</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-high">—</div>
+        <div class="kpi-label">High-Risk Divisions</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card-accent">
+      <div class="kpi-icon amber">🟡</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-medium">—</div>
+        <div class="kpi-label">Medium-Risk Divisions</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card-accent">
+      <div class="kpi-icon green">🟢</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-low">—</div>
+        <div class="kpi-label">Low-Risk Divisions</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card-accent">
+      <div class="kpi-icon blue">📊</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-avg-risk">—</div>
+        <div class="kpi-label">Avg Risk Score</div>
+      </div>
+    </div>
+    <!-- Model Accuracy KPI -->
+    <div class="kpi-card kpi-card-model">
+      <div class="kpi-model-header">
+        <span class="kpi-model-label">MODEL ACCURACY</span>
+        <span class="kpi-model-name" id="kpi-model-name">—</span>
+      </div>
+      <div class="kpi-model-metrics">
+        <div class="kpi-metric-item">
+          <span class="kpi-metric-val" id="kpi-m-acc">—</span>
+          <span class="kpi-metric-key">Accuracy</span>
+        </div>
+        <div class="kpi-metric-divider"></div>
+        <div class="kpi-metric-item">
+          <span class="kpi-metric-val" id="kpi-m-auc">—</span>
+          <span class="kpi-metric-key">ROC-AUC</span>
+        </div>
+        <div class="kpi-metric-divider"></div>
+        <div class="kpi-metric-item">
+          <span class="kpi-metric-val" id="kpi-m-f1">—</span>
+          <span class="kpi-metric-key">F1 Score</span>
+        </div>
+        <div class="kpi-metric-divider"></div>
+        <div class="kpi-metric-item">
+          <span class="kpi-metric-val" id="kpi-m-prec">—</span>
+          <span class="kpi-metric-key">Precision</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Map + right panel -->
+  <div class="map-row">
+    <!-- Map -->
+    <div class="map-container">
+      <div id="map"></div>
+      <div class="map-legend">
+        <div class="legend-title">Risk Level</div>
+        <div class="legend-item"><span class="legend-dot high"></span>High (>0.60)</div>
+        <div class="legend-item"><span class="legend-dot medium"></span>Medium (0.30–0.60)</div>
+        <div class="legend-item"><span class="legend-dot low"></span>Low (<0.30)</div>
+        <div class="legend-item"><span class="legend-dot hotspot"></span>Hotspot cluster</div>
+      </div>
+    </div>
+
+    <!-- Right: division detail panel -->
+    <div class="detail-panel" id="detail-panel">
+      <div class="panel-placeholder" id="panel-placeholder">
+        <div class="placeholder-icon">🗺️</div>
+        <p>Click a division on the map<br/>or select one from the sidebar</p>
+      </div>
+      <div class="division-detail hidden" id="division-detail">
+        <div class="detail-header">
+          <div>
+            <h2 class="detail-zone" id="detail-zone-name">—</h2>
+            <p class="detail-date" id="detail-zone-date">—</p>
+          </div>
+          <div class="risk-badge-large" id="detail-risk-badge">—</div>
+        </div>
+        <div class="risk-meter-wrap">
+          <div class="risk-meter-label">
+            <span>Risk Score</span>
+            <span class="risk-score-val" id="detail-risk-score">—</span>
+          </div>
+          <div class="risk-meter-track">
+            <div class="risk-meter-fill" id="detail-risk-fill"></div>
+          </div>
+        </div>
+        <div class="detail-stats-grid">
+          <div class="detail-stat">
+            <span class="ds-val" id="ds-high-risk-days">—</span>
+            <span class="ds-key">High-Risk Days %</span>
+          </div>
+          <div class="detail-stat">
+            <span class="ds-val" id="ds-avg-daily">—</span>
+            <span class="ds-key">Avg Daily Crimes</span>
+          </div>
+          <div class="detail-stat">
+            <span class="ds-val" id="ds-total">—</span>
+            <span class="ds-key">Total Crimes</span>
+          </div>
+          <div class="detail-stat">
+            <span class="ds-val" id="ds-max">—</span>
+            <span class="ds-key">Peak Day</span>
+          </div>
+        </div>
+        <div class="chart-section" style="margin-top:1rem; margin-bottom:1rem">
+          <p class="chart-title">AI Explanation (Risk Breakdown)</p>
+          <div style="background:var(--bg-card); border-radius:8px; padding:1rem; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.5rem;">
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-sub); font-size:0.85rem">Base Ensemble Risk</span>
+              <span id="expl-base-prob" style="font-family:monospace; color:var(--text-primary)">—</span>
+            </div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-sub); font-size:0.85rem">↳ Tree Local Model</span>
+              <span id="expl-tree-prob" style="font-family:monospace; color:var(--text-muted)">—</span>
+            </div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-sub); font-size:0.85rem">↳ LSTM Temporal Risk</span>
+              <span id="expl-lstm-prob" style="font-family:monospace; color:var(--text-muted)">—</span>
+            </div>
+            <div style="height:1px; background:var(--border-color); margin:0.3rem 0;"></div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-primary); font-size:0.85rem; font-weight:600">Time-of-Day Multiplier</span>
+              <span id="expl-multiplier" style="font-family:monospace; color:#a78bfa; font-weight:600">—</span>
+            </div>
+            <div style="height:1px; background:var(--border-color); margin:0.3rem 0;"></div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-primary); font-weight:700">Scaled Final Risk</span>
+              <span id="expl-final-prob" style="font-family:monospace; font-weight:700; color:var(--text-primary)">—</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-section">
+          <p class="chart-title">Crime Trend (Division)</p>
+          <canvas id="trend-chart" height="130"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: model metrics + feature importance + fairness -->
+  <section class="bottom-row">
+    <!-- Model comparison -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Model Performance</h3>
+        <span class="card-tag">All Models</span>
+      </div>
+      <div class="card-body">
+        <canvas id="metrics-chart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Feature importance -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Feature Importance</h3>
+        <span class="card-tag">SHAP / Model</span>
+      </div>
+      <div class="card-body">
+        <canvas id="importance-chart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Zone Risk Table -->
+    <div class="card card-wide">
+      <div class="card-header">
+        <h3>Division Risk Rankings</h3>
+        <span class="card-tag" id="table-date-label">All Time</span>
+      </div>
+      <div class="card-body">
+        <div class="risk-table-wrap">
+          <table class="risk-table" id="risk-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Division</th>
+                <th>Risk Score</th>
+                <th>Risk Level</th>
+                <th>Total Crimes</th>
+                <th>High-Risk %</th>
+              </tr>
+            </thead>
+            <tbody id="risk-table-body">
+              <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">Run a forecast to populate table…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

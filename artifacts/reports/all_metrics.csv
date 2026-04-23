@@ -1,0 +1,4 @@
+model,roc_auc,accuracy,precision,recall,f1,threshold
+xgboost,0.5675,0.5585,0.4418,0.5321,0.4827,0.4966
+wtd_ensemble,0.5661,0.5565,0.4381,0.5142,0.4731,0.4966
+lightgbm,0.5616,0.5541,0.4348,0.5061,0.4677,0.4966

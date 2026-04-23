@@ -1,0 +1,5 @@
+model,roc_auc
+logistic_regression,0.5454
+random_forest,0.5377
+lightgbm,0.5358
+xgboost,0.531

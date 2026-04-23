@@ -1,0 +1,4 @@
+method,n_clusters,silhouette,noise_pct
+dbscan,7,-0.2669,0.2
+hdbscan,517,0.4454,37.79
+kmeans,21,0.3942,0.0
