@@ -1,0 +1,34 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment files
+.env
+
+# Dataset files
+data/
+*.csv
+*.zip
+*.xlsx
+
+# Model / artifact files
+artifacts/
+*.pkl
+*.joblib
+*.h5
+
+# Log files
+*.log
+pipeline_log.txt
+
+# VS Code settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
