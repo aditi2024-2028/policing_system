@@ -52,16 +52,23 @@ app.include_router(hotspots.router,    prefix="/api")
 app.include_router(stats.router,       prefix="/api")
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
-dashboard_dir = Path(__file__).resolve().parent.parent / "dashboard"
+# Serve React+Vite build from frontend/dist (fall back to old dashboard/ if build missing)
+_root = Path(__file__).resolve().parent.parent
+dist_dir      = _root / "frontend" / "dist"
+dashboard_dir = _root / "dashboard"
 
 @app.get("/", include_in_schema=False)
 def serve_dashboard():
-    idx = dashboard_dir / "index.html"
-    if idx.exists():
-        return FileResponse(str(idx))
-    return {"detail": "Dashboard not found. Check dashboard/ directory."}
+    # Prefer the React build
+    for candidate in [dist_dir / "index.html", dashboard_dir / "index.html"]:
+        if candidate.exists():
+            return FileResponse(str(candidate))
+    return {"detail": "Dashboard not found. Run: cd frontend && npm run build"}
 
-if dashboard_dir.exists():
+# Mount static assets — React build takes priority
+if (dist_dir / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(dist_dir / "assets")), name="static")
+elif dashboard_dir.exists():
     app.mount("/assets", StaticFiles(directory=str(dashboard_dir)), name="static")
 
 # ── Startup: load tree model + LSTM + feature table ──────────────────────────
