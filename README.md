@@ -250,9 +250,3 @@ PoliceSight explicitly addresses algorithmic bias (cf. Lum & Isaac, 2016):
 **Year:** 2026
 
 ---
-Interactive API docs: http://localhost:8000/api/docs
-6 — Start the dashboard
-bash: cd frontend
-npm install
-npm run dev
-Dashboard: http://localhost:5173
